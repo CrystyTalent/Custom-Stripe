@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import clientPromise from '@/lib/mongodb';
+import { getSession } from '@/lib/auth';
 import { ObjectId } from 'mongodb';
 
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getSession();
-
+    
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -15,45 +15,51 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const cartItemId = searchParams.get('id');
+    const itemId = searchParams.get('itemId');
 
-    if (!cartItemId) {
+    if (!itemId) {
       return NextResponse.json(
-        { error: 'Cart item ID is required' },
+        { error: 'Item ID is required' },
         { status: 400 }
       );
     }
 
-    let objectId;
+    // Connect to MongoDB
+    let client;
     try {
-      objectId = new ObjectId(cartItemId);
-    } catch {
+      client = await clientPromise;
+    } catch (dbError) {
+      console.error('MongoDB connection error:', dbError);
       return NextResponse.json(
-        { error: 'Invalid cart item ID' },
-        { status: 400 }
+        { error: 'Database connection failed' },
+        { status: 500 }
       );
     }
 
-    const client = await clientPromise;
     const dbName = process.env.MONGODB_DB_NAME as string;
     const db = client.db(dbName);
     const cart = db.collection('cart');
 
-    // Verify the item belongs to the user
-    const item = await cart.findOne({
-      _id: objectId,
-      userId: session.userId,
-    });
-
-    if (!item) {
+    // Remove item from cart
+    let result;
+    try {
+      result = await cart.deleteOne({
+        _id: new ObjectId(itemId),
+        userId: session.userId,
+      });
+    } catch (idError) {
       return NextResponse.json(
-        { error: 'Cart item not found' },
-        { status: 404 }
+        { error: 'Invalid item ID' },
+        { status: 400 }
       );
     }
 
-    // Remove item
-    await cart.deleteOne({ _id: objectId });
+    if (result.deletedCount === 0) {
+      return NextResponse.json(
+        { error: 'Item not found in cart' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       { message: 'Item removed from cart successfully' },

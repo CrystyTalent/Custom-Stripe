@@ -5,7 +5,6 @@ import Link from 'next/link';
 
 export default function CartIcon() {
   const [itemCount, setItemCount] = useState(0);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCartCount = async () => {
@@ -13,25 +12,19 @@ export default function CartIcon() {
         const response = await fetch('/api/cart');
         if (response.ok) {
           const data = await response.json();
-          setItemCount(data.itemCount || 0);
+          const count = data.items?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
+          setItemCount(count);
         }
       } catch (error) {
         console.error('Error fetching cart count:', error);
-      } finally {
-        setLoading(false);
       }
     };
 
     fetchCartCount();
-    
-    // Refresh cart count periodically
-    const interval = setInterval(fetchCartCount, 3000);
+    // Refresh cart count every 5 seconds
+    const interval = setInterval(fetchCartCount, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  if (loading) {
-    return null;
-  }
 
   return (
     <Link

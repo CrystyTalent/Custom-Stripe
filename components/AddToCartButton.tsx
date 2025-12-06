@@ -5,16 +5,24 @@ import { useRouter } from 'next/navigation';
 
 interface AddToCartButtonProps {
   productId: number;
+  productName: string;
+  productPrice: number;
+  productImage: string;
 }
 
-export default function AddToCartButton({ productId }: AddToCartButtonProps) {
+export default function AddToCartButton({
+  productId,
+  productName,
+  productPrice,
+  productImage,
+}: AddToCartButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState('');
 
   const handleAddToCart = async () => {
     setLoading(true);
-    setSuccess(false);
+    setMessage('');
 
     try {
       const response = await fetch('/api/cart/add', {
@@ -22,36 +30,48 @@ export default function AddToCartButton({ productId }: AddToCartButtonProps) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ productId, quantity: 1 }),
+        body: JSON.stringify({
+          productId,
+          productName,
+          productPrice,
+          productImage,
+          quantity: 1,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(true);
-        setTimeout(() => {
-          setSuccess(false);
-          router.refresh(); // Refresh to update cart count
-        }, 1000);
+        setMessage('Added to cart!');
+        router.refresh(); // Refresh to update cart count
+        setTimeout(() => setMessage(''), 2000);
       } else {
-        alert(data.error || 'Failed to add item to cart');
+        setMessage(data.error || 'Failed to add to cart');
+        setTimeout(() => setMessage(''), 3000);
       }
     } catch (error) {
-      console.error('Add to cart error:', error);
-      alert('An error occurred. Please try again.');
+      setMessage('An error occurred. Please try again.');
+      setTimeout(() => setMessage(''), 3000);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <button
-      onClick={handleAddToCart}
-      disabled={loading || success}
-      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      {loading ? 'Adding...' : success ? 'Added!' : 'Add to Cart'}
-    </button>
+    <div className="flex flex-col items-end gap-2">
+      <button
+        onClick={handleAddToCart}
+        disabled={loading}
+        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {loading ? 'Adding...' : 'Add to Cart'}
+      </button>
+      {message && (
+        <span className={`text-xs ${message.includes('Added') ? 'text-green-400' : 'text-red-400'}`}>
+          {message}
+        </span>
+      )}
+    </div>
   );
 }
 

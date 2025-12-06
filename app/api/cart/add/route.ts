@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import clientPromise from '@/lib/mongodb';
-import { getProductById } from '@/lib/products';
+import { getSession } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-
+    
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -15,32 +14,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, quantity = 1 } = body;
+    const { productId, productName, productPrice, productImage, quantity = 1 } = body;
 
-    if (!productId) {
+    // Validate input
+    if (!productId || !productName || productPrice === undefined || !productImage) {
       return NextResponse.json(
-        { error: 'Product ID is required' },
+        { error: 'Missing required product information' },
         { status: 400 }
       );
     }
 
-    // Verify product exists
-    const product = getProductById(productId);
-    if (!product) {
+    // Connect to MongoDB
+    let client;
+    try {
+      client = await clientPromise;
+    } catch (dbError) {
+      console.error('MongoDB connection error:', dbError);
       return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
+        { error: 'Database connection failed' },
+        { status: 500 }
       );
     }
 
-    if (quantity < 1) {
-      return NextResponse.json(
-        { error: 'Quantity must be at least 1' },
-        { status: 400 }
-      );
-    }
-
-    const client = await clientPromise;
     const dbName = process.env.MONGODB_DB_NAME as string;
     const db = client.db(dbName);
     const cart = db.collection('cart');
@@ -53,19 +48,13 @@ export async function POST(request: NextRequest) {
 
     if (existingItem) {
       // Update quantity
-      const newQuantity = existingItem.quantity + quantity;
-      await cart.updateOne(
-        { _id: existingItem._id },
-        {
-          $set: {
-            quantity: newQuantity,
-            updatedAt: new Date(),
-          },
-        }
+      const result = await cart.updateOne(
+        { userId: session.userId, productId: productId },
+        { $inc: { quantity: quantity } }
       );
-
+      
       return NextResponse.json(
-        { message: 'Cart updated successfully', quantity: newQuantity },
+        { message: 'Cart updated successfully', updated: true },
         { status: 200 }
       );
     } else {
@@ -73,13 +62,15 @@ export async function POST(request: NextRequest) {
       const result = await cart.insertOne({
         userId: session.userId,
         productId: productId,
+        productName: productName,
+        productPrice: productPrice,
+        productImage: productImage,
         quantity: quantity,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        addedAt: new Date(),
       });
 
       return NextResponse.json(
-        { message: 'Item added to cart successfully', cartItemId: result.insertedId },
+        { message: 'Item added to cart successfully', itemId: result.insertedId },
         { status: 201 }
       );
     }

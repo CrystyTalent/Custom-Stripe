@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
 import clientPromise from '@/lib/mongodb';
+import { getSession } from '@/lib/auth';
 import { ObjectId } from 'mongodb';
 
 export async function PUT(request: NextRequest) {
   try {
     const session = await getSession();
-
+    
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -15,11 +15,11 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { cartItemId, quantity } = body;
+    const { itemId, quantity } = body;
 
-    if (!cartItemId || quantity === undefined) {
+    if (!itemId || quantity === undefined) {
       return NextResponse.json(
-        { error: 'Cart item ID and quantity are required' },
+        { error: 'Item ID and quantity are required' },
         { status: 400 }
       );
     }
@@ -31,44 +31,42 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    let objectId;
+    // Connect to MongoDB
+    let client;
     try {
-      objectId = new ObjectId(cartItemId);
-    } catch {
+      client = await clientPromise;
+    } catch (dbError) {
+      console.error('MongoDB connection error:', dbError);
       return NextResponse.json(
-        { error: 'Invalid cart item ID' },
-        { status: 400 }
+        { error: 'Database connection failed' },
+        { status: 500 }
       );
     }
 
-    const client = await clientPromise;
     const dbName = process.env.MONGODB_DB_NAME as string;
     const db = client.db(dbName);
     const cart = db.collection('cart');
 
-    // Verify the item belongs to the user
-    const item = await cart.findOne({
-      _id: objectId,
-      userId: session.userId,
-    });
-
-    if (!item) {
+    // Update item quantity
+    let result;
+    try {
+      result = await cart.updateOne(
+        { _id: new ObjectId(itemId), userId: session.userId },
+        { $set: { quantity: quantity } }
+      );
+    } catch (idError) {
       return NextResponse.json(
-        { error: 'Cart item not found' },
-        { status: 404 }
+        { error: 'Invalid item ID' },
+        { status: 400 }
       );
     }
 
-    // Update quantity
-    await cart.updateOne(
-      { _id: objectId },
-      {
-        $set: {
-          quantity: quantity,
-          updatedAt: new Date(),
-        },
-      }
-    );
+    if (result.matchedCount === 0) {
+      return NextResponse.json(
+        { error: 'Item not found in cart' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json(
       { message: 'Cart updated successfully' },

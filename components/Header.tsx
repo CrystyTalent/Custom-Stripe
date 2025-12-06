@@ -21,12 +21,6 @@ export default async function Header() {
               >
                 Store
               </Link>
-              <Link
-                href="/orders"
-                className="rounded-md px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
-              >
-                Orders
-              </Link>
               <CartIcon />
               <span className="text-gray-300">Welcome, {session.username}</span>
               <LogoutButton />

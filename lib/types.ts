@@ -24,24 +24,10 @@ export interface CartItem {
   _id?: string;
   userId: string;
   productId: number;
+  productName: string;
+  productPrice: number;
+  productImage: string;
   quantity: number;
-  product: Product;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-export type OrderStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
-
-export interface Order {
-  _id?: string;
-  userId: string;
-  paymentIntentId: string;
-  amount: number;
-  currency: string;
-  status: OrderStatus;
-  refunded?: boolean;
-  refundAmount?: number;
-  createdAt?: Date;
-  updatedAt?: Date;
+  addedAt?: Date;
 }
 

@@ -1,7 +1,66 @@
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { products } from '@/lib/products';
 import AddToCartButton from '@/components/AddToCartButton';
+
+// Mock product data
+const products = [
+  {
+    id: 1,
+    name: 'Premium Headphones',
+    price: 199.99,
+    description: 'High-quality wireless headphones with noise cancellation',
+    image: '🎧',
+  },
+  {
+    id: 2,
+    name: 'Smart Watch',
+    price: 299.99,
+    description: 'Feature-rich smartwatch with health tracking',
+    image: '⌚',
+  },
+  {
+    id: 3,
+    name: 'Wireless Mouse',
+    price: 49.99,
+    description: 'Ergonomic wireless mouse with precision tracking',
+    image: '🖱️',
+  },
+  {
+    id: 4,
+    name: 'Mechanical Keyboard',
+    price: 149.99,
+    description: 'RGB mechanical keyboard with customizable keys',
+    image: '⌨️',
+  },
+  {
+    id: 5,
+    name: 'USB-C Hub',
+    price: 79.99,
+    description: 'Multi-port USB-C hub for all your devices',
+    image: '🔌',
+  },
+  {
+    id: 6,
+    name: 'Laptop Stand',
+    price: 39.99,
+    description: 'Adjustable aluminum laptop stand for better ergonomics',
+    image: '💻',
+  },
+  {
+    id: 7,
+    name: 'Webcam HD',
+    price: 89.99,
+    description: '1080p HD webcam with auto-focus and microphone',
+    image: '📹',
+  },
+  {
+    id: 8,
+    name: 'Desk Lamp',
+    price: 59.99,
+    description: 'LED desk lamp with adjustable brightness and color temperature',
+    image: '💡',
+  },
+];
 
 export default async function StorePage() {
   const session = await getSession();
@@ -39,7 +98,12 @@ export default async function StorePage() {
                 <span className="text-2xl font-bold text-white">
                   ${product.price.toFixed(2)}
                 </span>
-                <AddToCartButton productId={product.id} />
+                <AddToCartButton
+                  productId={product.id}
+                  productName={product.name}
+                  productPrice={product.price}
+                  productImage={product.image}
+                />
               </div>
             </div>
           ))}

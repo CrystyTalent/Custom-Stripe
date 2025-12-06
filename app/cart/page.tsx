@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { CartItem } from '@/lib/types';
 import Link from 'next/link';
+
+interface CartItem {
+  _id: string;
+  productId: number;
+  productName: string;
+  productPrice: number;
+  productImage: string;
+  quantity: number;
+}
 
 export default function CartPage() {
   const router = useRouter();
@@ -33,52 +41,38 @@ export default function CartPage() {
     }
   };
 
-  const updateQuantity = async (cartItemId: string, newQuantity: number) => {
-    if (newQuantity < 1) {
-      removeItem(cartItemId);
-      return;
-    }
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      const response = await fetch(`/api/cart/remove?itemId=${itemId}`, {
+        method: 'DELETE',
+      });
 
-    setUpdating(cartItemId);
+      if (response.ok) {
+        fetchCart();
+      }
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
+  };
+
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    if (newQuantity < 1) return;
+
+    setUpdating(itemId);
     try {
       const response = await fetch('/api/cart/update', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ cartItemId, quantity: newQuantity }),
+        body: JSON.stringify({ itemId, quantity: newQuantity }),
       });
 
       if (response.ok) {
-        await fetchCart();
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to update cart');
+        fetchCart();
       }
     } catch (error) {
-      console.error('Error updating cart:', error);
-      alert('An error occurred. Please try again.');
-    } finally {
-      setUpdating(null);
-    }
-  };
-
-  const removeItem = async (cartItemId: string) => {
-    setUpdating(cartItemId);
-    try {
-      const response = await fetch(`/api/cart/remove?id=${cartItemId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        await fetchCart();
-      } else {
-        const data = await response.json();
-        alert(data.error || 'Failed to remove item');
-      }
-    } catch (error) {
-      console.error('Error removing item:', error);
-      alert('An error occurred. Please try again.');
+      console.error('Error updating quantity:', error);
     } finally {
       setUpdating(null);
     }
@@ -95,87 +89,82 @@ export default function CartPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-black py-8 px-4">
       <div className="container mx-auto max-w-4xl">
-        <h1 className="mb-8 text-4xl font-bold text-white">Shopping Cart</h1>
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold text-white mb-2">Shopping Cart</h1>
+          {cartItems.length === 0 ? (
+            <p className="text-gray-400">Your cart is empty.</p>
+          ) : (
+            <p className="text-gray-400">{cartItems.length} item(s) in your cart</p>
+          )}
+        </div>
 
         {cartItems.length === 0 ? (
-          <div className="rounded-lg border border-gray-800 bg-gray-900 p-12 text-center">
-            <p className="mb-4 text-xl text-gray-400">Your cart is empty</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-xl text-gray-400 mb-4">Your cart is empty</p>
             <Link
               href="/store"
-              className="inline-block rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+              className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
             >
               Continue Shopping
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
-            {cartItems.map((item) => (
-              <div
-                key={item._id}
-                className="rounded-lg border border-gray-800 bg-gray-900 p-6"
-              >
-                <div className="flex items-center gap-6">
-                  <div className="flex h-24 w-24 items-center justify-center rounded-md bg-gray-800 text-4xl">
-                    {item.product.image}
+          <>
+            <div className="space-y-4 mb-8">
+              {cartItems.map((item) => (
+                <div
+                  key={item._id}
+                  className="flex items-center gap-4 rounded-lg border border-gray-800 bg-gray-900 p-4"
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-md bg-gray-800 text-3xl">
+                    {item.productImage}
                   </div>
-
+                  
                   <div className="flex-1">
-                    <h3 className="mb-1 text-xl font-semibold text-white">
-                      {item.product.name}
-                    </h3>
-                    <p className="mb-2 text-sm text-gray-400">
-                      {item.product.description}
-                    </p>
-                    <p className="text-lg font-bold text-white">
-                      ${((item.product?.price || 0)).toFixed(2)}
-                    </p>
+                    <h3 className="text-lg font-semibold text-white">{item.productName}</h3>
+                    <p className="text-gray-400">${item.productPrice.toFixed(2)} each</p>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() =>
-                          updateQuantity(item._id!, item.quantity - 1)
-                        }
-                        disabled={updating === item._id}
-                        className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-700 bg-gray-800 text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                        onClick={() => handleUpdateQuantity(item._id, item.quantity - 1)}
+                        disabled={updating === item._id || item.quantity <= 1}
+                        className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1 text-white transition-colors hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         −
                       </button>
-                      <span className="w-12 text-center text-white">
-                        {item.quantity}
-                      </span>
+                      <span className="w-12 text-center text-white">{item.quantity}</span>
                       <button
-                        onClick={() =>
-                          updateQuantity(item._id!, item.quantity + 1)
-                        }
+                        onClick={() => handleUpdateQuantity(item._id, item.quantity + 1)}
                         disabled={updating === item._id}
-                        className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-700 bg-gray-800 text-white transition-colors hover:bg-gray-700 disabled:opacity-50"
+                        className="rounded-md border border-gray-700 bg-gray-800 px-3 py-1 text-white transition-colors hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         +
                       </button>
                     </div>
-                    <p className="text-lg font-semibold text-white">
-                      ${((item.product?.price || 0) * item.quantity).toFixed(2)}
-                    </p>
+
+                    <div className="w-24 text-right">
+                      <p className="text-lg font-bold text-white">
+                        ${(item.productPrice * item.quantity).toFixed(2)}
+                      </p>
+                    </div>
+
                     <button
-                      onClick={() => removeItem(item._id!)}
-                      disabled={updating === item._id}
-                      className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                      onClick={() => handleRemoveItem(item._id)}
+                      className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white transition-colors hover:bg-red-700"
                     >
                       Remove
                     </button>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
             <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
               <div className="mb-4 flex items-center justify-between">
-                <span className="text-2xl font-bold text-white">Total</span>
-                <span className="text-3xl font-bold text-white">
-                  ${total.toFixed(2)}
-                </span>
+                <span className="text-xl font-semibold text-white">Total:</span>
+                <span className="text-3xl font-bold text-white">${total.toFixed(2)}</span>
               </div>
               <div className="flex gap-4">
                 <Link
@@ -184,15 +173,15 @@ export default function CartPage() {
                 >
                   Continue Shopping
                 </Link>
-                <Link
-                  href="/checkout"
-                  className="flex-1 rounded-md bg-blue-600 px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-blue-700"
+                <button
+                  className="flex-1 rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+                  onClick={() => alert('Checkout functionality coming soon!')}
                 >
                   Checkout
-                </Link>
+                </button>
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
