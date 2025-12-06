@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import bcrypt from 'bcryptjs';
 import { setSession } from '@/lib/auth';
+import { generateApiKeys } from '@/lib/api-keys';
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,11 +76,16 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate API keys
+    const { productionApiKey, webhookSecret } = generateApiKeys();
+
     // Create user
     const result = await users.insertOne({
       username: trimmedUsername,
       email: trimmedEmail,
       password: hashedPassword,
+      productionApiKey,
+      webhookSecret,
       createdAt: new Date(),
     });
 

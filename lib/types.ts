@@ -3,6 +3,8 @@ export interface User {
   username: string;
   email: string;
   password: string;
+  productionApiKey?: string;
+  webhookSecret?: string;
   createdAt?: Date;
 }
 
