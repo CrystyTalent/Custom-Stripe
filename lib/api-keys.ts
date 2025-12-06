@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
  */
 export function generateProductionApiKey(): string {
   const randomHex = randomBytes(32).toString('hex');
-  return `c2c_live_${randomHex}`;
+  return `payzo_live_${randomHex}`;
 }
 
 /**
