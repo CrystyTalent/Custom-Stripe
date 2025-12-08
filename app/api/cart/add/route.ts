@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     if (existingItem) {
       // Update quantity
-      const result = await cart.updateOne(
+      await cart.updateOne(
         { userId: session.userId, productId: productId },
         { $inc: { quantity: quantity } }
       );

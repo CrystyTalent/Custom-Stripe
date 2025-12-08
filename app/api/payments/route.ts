@@ -85,16 +85,10 @@ export async function POST(request: NextRequest) {
       email: user.email,
       name: user.username,
       description: `Order with ${cartItems.length} item(s)`,
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/order`,
+      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
       metadata: metadata.order_id,
       createdAt: new Date(),
       userId: session.userId,
-      cartItems: cartItems.map(item => ({
-        productId: item.productId,
-        productName: item.productName,
-        quantity: item.quantity,
-        price: item.productPrice
-      })),
       state: 'pending'
     };
     // Save paymentData in the database with the unique payment id

@@ -7,6 +7,7 @@ import Link from 'next/link';
 interface OrderItem {
   productId: number;
   productName: string;
+  productImage: string;
   quantity: number;
   price: number;
 }
@@ -197,7 +198,7 @@ export default function OrderPage() {
                     className="flex items-center gap-4 rounded-lg border border-gray-800 bg-gray-800 p-4"
                   >
                     <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gray-700 text-2xl">
-                      📦
+                      {item.productImage}
                     </div>
 
                     <div className="flex-1">

@@ -52,6 +52,5 @@ export interface Payment {
   metadata: string;
   createdAt: Date;
   userId: string;
-  cartItems: PaymentCartItem[];
   state: string;
 }

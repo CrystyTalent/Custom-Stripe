@@ -54,7 +54,8 @@ export async function PUT(request: NextRequest) {
         { _id: new ObjectId(itemId), userId: session.userId },
         { $set: { quantity: quantity } }
       );
-    } catch (idError) {
+    } catch (error) {
+      console.error('Find one product on cart', error)
       return NextResponse.json(
         { error: 'Invalid item ID' },
         { status: 400 }

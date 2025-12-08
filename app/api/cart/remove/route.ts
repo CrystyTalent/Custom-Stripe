@@ -47,7 +47,8 @@ export async function DELETE(request: NextRequest) {
         _id: new ObjectId(itemId),
         userId: session.userId,
       });
-    } catch (idError) {
+    } catch (error) {
+      console.error('Find one product on cart', error);
       return NextResponse.json(
         { error: 'Invalid item ID' },
         { status: 400 }
