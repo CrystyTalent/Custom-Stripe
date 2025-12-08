@@ -324,9 +324,6 @@ export default function OrderPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                     State
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -360,27 +357,6 @@ export default function OrderPage() {
                       <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-white ${getStatusColor(order.state)}`}>
                         {(order.state || 'UNKNOWN').toUpperCase()}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      {order.state === 'pending' ? (
-                        <Link
-                          href={`/pay/${order.paymentId}`}
-                          className="inline-flex rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Pay
-                        </Link>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOrderClick(order);
-                          }}
-                          className="text-blue-400 hover:text-blue-300 text-xs"
-                        >
-                          View
-                        </button>
-                      )}
                     </td>
                   </tr>
                 ))}

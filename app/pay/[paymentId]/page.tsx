@@ -2,149 +2,238 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
+import {
+  Elements,
+  CardElement,
+  useStripe,
+  useElements
+} from '@stripe/react-stripe-js';
+import Link from 'next/link';
 
-interface PaymentItem {
-  productId: number;
-  productName: string;
-  quantity: number;
-  price: number;
-}
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string);
 
-interface Payment {
+interface PaymentData {
   paymentId: string;
   amount: string;
   currency: string;
   email: string;
   name: string;
   description: string;
-  cartItems: PaymentItem[];
+  cartItems: Array<{
+    productId: number;
+    productName: string;
+    quantity: number;
+    price: number;
+  }>;
+}
+
+function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const router = useRouter();
+  const [email, setEmail] = useState(paymentData.email || '');
+  const [name, setName] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setProcessing(true);
+    setError(null);
+
+    try {
+      // Create payment intent
+      const intentResponse = await fetch(`/api/payments/${paymentData.paymentId}/intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!intentResponse.ok) {
+        const errorData = await intentResponse.json();
+        throw new Error(errorData.error || 'Failed to create payment intent');
+      }
+
+      const { clientSecret } = await intentResponse.json();
+
+      // Get card element
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        throw new Error('Card element not found');
+      }
+
+      // Confirm payment
+      const { error: confirmError, paymentIntent } = await stripe.confirmCardPayment(
+        clientSecret,
+        {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: name,
+              email: email,
+            },
+          },
+        }
+      );
+
+      if (confirmError) {
+        // Update payment status to failed
+        await fetch(`/api/payments/${paymentData.paymentId}/status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'failed' }),
+        });
+        throw new Error(confirmError.message);
+      }
+
+      if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Update payment status to completed/paid
+        await fetch(`/api/payments/${paymentData.paymentId}/status`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ status: 'paid' }),
+        });
+
+        // Redirect to success page or order page
+        router.push(`/order?paymentId=${paymentData.paymentId}`);
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An error occurred during payment');
+      }
+      setProcessing(false);
+    }
+  };
+
+  const cardElementOptions = {
+    style: {
+      base: {
+        fontSize: '16px',
+        color: '#ffffff',
+        '::placeholder': {
+          color: '#9ca3af',
+        },
+        backgroundColor: '#1f2937',
+      },
+      invalid: {
+        color: '#ef4444',
+        iconColor: '#ef4444',
+      },
+    },
+    hidePostalCode: true,
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full rounded-md border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="your@email.com"
+        />
+      </div>
+
+
+      <div>
+        <label className="block text-sm font-medium text-white mb-2">
+          Card information
+        </label>
+        <div className="rounded-md border border-gray-700 bg-gray-800 p-4">
+          <CardElement options={cardElementOptions} />
+        </div>
+      </div>
+
+      {error && (
+        <div className="rounded-md bg-red-900/50 border border-red-800 p-4">
+          <p className="text-red-300 text-sm">{error}</p>
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
+          Name on Card
+        </label>
+        <input
+          type="text"
+          id="name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="w-full rounded-md border border-gray-700 bg-gray-800 px-4 py-3 text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          placeholder="Full Name"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={!stripe || processing}
+        className="w-full rounded-md bg-white px-6 py-4 text-lg font-semibold text-black transition-colors hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {processing ? 'Processing...' : `Purchase`}
+      </button>
+
+      <p className="text-center text-xs text-gray-400">
+        Powered by Payzo.cc • Secure Payment
+      </p>
+    </form>
+  );
 }
 
 export default function PaymentPage() {
   const params = useParams();
-  const router = useRouter();
-  const paymentId = params.paymentId as string;
-  
-  const [payment, setPayment] = useState<Payment | null>(null);
+  const paymentId = params?.paymentId as string;
+  const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const [email, setEmail] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardName, setCardName] = useState('');
 
-  const fetchPayment = async () => {
+  useEffect(() => {
     if (!paymentId) {
       setError('Payment ID is required');
       setLoading(false);
       return;
     }
 
-    try {
-      const response = await fetch(`/api/payments/${encodeURIComponent(paymentId)}`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.payment) {
-          setPayment(data.payment);
-          setEmail(data.payment.email || '');
-        } else {
-          setError('Payment data not found in response');
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        setError(errorData.error || 'Failed to load payment');
-      }
-    } catch (error) {
-      console.error('Error fetching payment:', error);
-      setError('Failed to load payment');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (paymentId) {
-      fetchPayment();
-    } else {
-      setError('Payment ID is missing from URL');
-      setLoading(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentId]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProcessing(true);
-    setError(null);
-
-    try {
-      // Simulate payment processing
-      // In a real implementation, you would integrate with Stripe or another payment processor
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Update payment status
-      const response = await fetch(`/api/payments/${paymentId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'completed',
-          email: email
-        }),
-      });
-
-      if (response.ok) {
-        // Redirect to success page or order page
-        router.push(`/order`);
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Payment failed' }));
-        setError(errorData.error || 'Payment failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      setError('Payment failed. Please try again.');
-      
-      // Update payment status to failed
+    const fetchPayment = async () => {
       try {
-        await fetch(`/api/payments/${paymentId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: 'failed',
-            email: email
-          }),
-        });
-      } catch (updateError) {
-        console.error('Failed to update payment status:', updateError);
+        const response = await fetch(`/api/payments/${paymentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setPaymentData(data.payment);
+        } else {
+          const errorData = await response.json();
+          setError(errorData.error || 'Payment not found');
+        }
+      } catch (err) {
+        console.error('Error fetching payment:', err);
+        setError('Failed to load payment details');
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setProcessing(false);
-    }
-  };
+    };
 
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatCardNumber(e.target.value);
-    setCardNumber(formatted);
-  };
+    fetchPayment();
+  }, [paymentId]);
 
   if (loading) {
     return (
@@ -154,133 +243,59 @@ export default function PaymentPage() {
     );
   }
 
-  if (error && !payment) {
+  if (error || !paymentData) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Payment Error</h1>
-          <p className="text-gray-400 mb-6">{error}</p>
-          <button
-            onClick={() => router.push('/store')}
-            className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
+          <h1 className="text-2xl font-bold text-white mb-4">Payment Not Found</h1>
+          <p className="text-gray-400 mb-6">{error || 'Unable to load payment details'}</p>
+          <Link
+            href="/store"
+            className="inline-block rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
           >
             Go to Store
-          </button>
+          </Link>
         </div>
       </div>
     );
   }
 
-  if (!payment) {
-    return null;
-  }
-
   return (
     <div className="min-h-screen bg-black py-12 px-4">
-      <div className="max-w-md mx-auto">
-        {/* Support Message */}
-        <div className="bg-gray-800 rounded-lg p-4 mb-6 text-sm text-gray-300">
-          If you didn&apos;t receive your product or are unhappy with your purchase, please visit our{' '}
-          <a href="#" className="underline hover:text-white">support page</a> for assistance or a possible refund.
+      <div className="max-w-2xl mx-auto">
+        {/* Support notice */}
+        <div className="mb-6 rounded-lg border border-gray-700 bg-gray-800 p-4">
+          <p className="text-sm text-gray-300">
+            If you didn&apos;t receive your product or are unhappy with your purchase, please visit our{' '}
+            <Link href="/support" className="underline text-blue-400 hover:text-blue-300">
+              support page
+            </Link>
+            {' '}for assistance or a possible refund.
+          </p>
         </div>
 
-        {/* Payment Form */}
-        <div className="bg-gray-800 rounded-lg p-6">
-          {/* Product Info */}
-          <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded flex items-center justify-center">
-                <span className="text-black font-bold text-xl">C</span>
+        {/* Payment form container */}
+        <div className="rounded-lg border border-gray-700 bg-gray-800 p-8">
+          {/* Product/Service info */}
+          <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-700">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center">
+                <span className="text-2xl font-bold text-black">{paymentData.name[0].toUpperCase()}</span>
               </div>
-              <span className="text-white font-semibold">{payment.description || 'Payment'}</span>
+              <div>
+                <h2 className="text-xl font-semibold text-white">{paymentData.description || 'Payment'}</h2>
+              </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white">${payment.amount}</div>
-              <div className="text-sm text-gray-400">Total:</div>
+              <p className="text-2xl font-bold text-white">${paymentData.amount}</p>
+              <p className="text-sm text-gray-400">Total:</p>
             </div>
           </div>
 
-          {/* Apple Pay Button */}
-          <button
-            type="button"
-            className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-md mb-4 transition-colors"
-            disabled
-          >
-            To use Apple Pay, open on your mobile device
-          </button>
-          <p className="text-center text-gray-400 text-sm mb-6">or pay with card</p>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit}>
-            {/* Email */}
-            <div className="mb-4">
-              <label className="block text-white text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-gray-900 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="your@email.com"
-              />
-            </div>
-
-            {/* Card Information */}
-            <div className="mb-4">
-              <label className="block text-white text-sm font-medium mb-2">Card information</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={handleCardNumberChange}
-                  maxLength={19}
-                  required
-                  className="w-full bg-gray-900 border border-gray-700 rounded-md px-4 py-3 pl-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Card number"
-                />
-                <span className="absolute left-3 top-3.5 text-gray-500">💳</span>
-                <button
-                  type="button"
-                  className="absolute right-3 top-2.5 bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded transition-colors"
-                >
-                  Autofill link
-                </button>
-              </div>
-            </div>
-
-            {/* Name on Card */}
-            <div className="mb-6">
-              <input
-                type="text"
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                required
-                className="w-full bg-gray-900 border border-gray-700 rounded-md px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Name on Card"
-              />
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="mb-4 p-3 bg-red-900/50 border border-red-800 rounded-md text-red-300 text-sm">
-                {error}
-              </div>
-            )}
-
-            {/* Purchase Button */}
-            <button
-              type="submit"
-              disabled={processing}
-              className="w-full bg-white hover:bg-gray-100 text-black font-semibold py-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {processing ? 'Processing...' : 'Purchase'}
-            </button>
-          </form>
-
-          {/* Footer */}
-          <p className="text-center text-gray-500 text-xs mt-6">
-            Powered by Payzo • Secure Payment
-          </p>
+          {/* Payment form */}
+          <Elements stripe={stripePromise}>
+            <CheckoutForm paymentData={paymentData} />
+          </Elements>
         </div>
       </div>
     </div>
