@@ -91,7 +91,7 @@ export default function KeysPage() {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500">
-                  Format: c2c_live_&lt;64 hex characters&gt;
+                  Format: payzo_live_&lt;64 hex characters&gt;
                 </p>
               </div>
             ) : (
