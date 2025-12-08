@@ -279,7 +279,7 @@ export default function PaymentPage() {
 
           {/* Footer */}
           <p className="text-center text-gray-500 text-xs mt-6">
-            Powered by Card2Crypto • Secure Payment
+            Powered by Payzo • Secure Payment
           </p>
         </div>
       </div>
