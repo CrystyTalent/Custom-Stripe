@@ -81,13 +81,25 @@ export default function CartPage() {
   };
 
   const handleCheckout = async () => {
-    const response = await fetch('/api/payments', {
-      method: 'POST',
-      body: JSON.stringify({ metadata: { order_id: Date.now() } }),
-    });
-    const data = await response.json();
-    console.log(data);
-    window.location.reload();
+    setCheckoutLoading(true);
+    try {
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        body: JSON.stringify({ metadata: { order_id: Date.now() } }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        router.push('/order');
+      } else {
+        console.error('Checkout error:', data);
+        alert('Failed to process checkout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Failed to process checkout. Please try again.');
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   if (loading) {
