@@ -41,14 +41,6 @@ export default function KeysPage() {
     }
   };
 
-  const maskKey = (key: string | null) => {
-    if (!key) return 'Not generated';
-    // Show first 12 chars and last 8 chars, mask the middle
-    const start = key.substring(0, 12);
-    const end = key.substring(key.length - 8);
-    return `${start}${'*'.repeat(32)}${end}`;
-  };
-
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-black">
