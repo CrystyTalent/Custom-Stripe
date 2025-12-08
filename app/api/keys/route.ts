@@ -37,7 +37,8 @@ export async function GET() {
         { _id: new ObjectId(session.userId) },
         { projection: { productionApiKey: 1, webhookSecret: 1, username: 1, email: 1 } }
       );
-    } catch (idError) {
+    } catch (error) {
+      console.error('Find user with API keys', error);
       return NextResponse.json(
         { error: 'Invalid user ID' },
         { status: 400 }

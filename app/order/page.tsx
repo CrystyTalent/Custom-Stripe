@@ -220,17 +220,8 @@ export default function OrderPage() {
 
           {/* Order Summary */}
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-            <h2 className="text-xl font-semibold text-white mb-4">Order Summary</h2>
             <div className="space-y-3 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Subtotal</span>
-                <span className="text-white">${subtotal.toFixed(2)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-400">Tax</span>
-                <span className="text-white">$0.00</span>
-              </div>
-              <div className="border-t border-gray-700 pt-3 flex items-center justify-between">
+              <div className="border-gray-700 pt-3 flex items-center justify-between">
                 <span className="text-xl font-semibold text-white">Total</span>
                 <span className="text-2xl font-bold text-white">${selectedOrder.amount}</span>
               </div>

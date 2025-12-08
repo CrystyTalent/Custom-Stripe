@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       let order;
       try {
         // Try to find by _id first (if it's a valid ObjectId)
-        let query: any = { userId: session.userId };
+        const query: { userId: string; _id?: ObjectId; paymentId?: string } = { userId: session.userId };
         
         // Check if orderId is a valid ObjectId format
         if (ObjectId.isValid(orderId)) {
