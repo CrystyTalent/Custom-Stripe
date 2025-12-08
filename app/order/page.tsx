@@ -135,8 +135,7 @@ export default function OrderPage() {
 
   // Show order details modal
   if (selectedOrder) {
-    const subtotal = selectedOrder.cartItems?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
-
+    
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-black py-8 px-4">
         <div className="container mx-auto max-w-4xl">
