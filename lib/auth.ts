@@ -20,9 +20,8 @@ export async function setSession(session: Session) {
   const cookieStore = await cookies();
   cookieStore.set('session', JSON.stringify(session), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 60 * 60 * 24 * 7, // 7 days
+    maxAge: 60 * 60 * 24, // 1 day
   });
 }
 
@@ -30,4 +29,3 @@ export async function clearSession() {
   const cookieStore = await cookies();
   cookieStore.delete('session');
 }
-

@@ -33,3 +33,25 @@ export interface CartItem {
   addedAt?: Date;
 }
 
+export interface PaymentCartItem {
+  productId: number;
+  productName: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Payment {
+  _id?: string;
+  paymentId: string;
+  amount: number;
+  currency: string;
+  email: string;
+  name: string;
+  description: string;
+  success_url: string;
+  metadata: string;
+  createdAt: Date;
+  userId: string;
+  cartItems: PaymentCartItem[];
+  state: string;
+}

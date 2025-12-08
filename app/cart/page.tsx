@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// import { NextResponse } from 'next/server';
 
 interface CartItem {
   _id: string;
@@ -19,6 +20,7 @@ export default function CartPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
 
   useEffect(() => {
     fetchCart();
@@ -78,10 +80,20 @@ export default function CartPage() {
     }
   };
 
+  const handleCheckout = async () => {
+    const response = await fetch('/api/payments', {
+      method: 'POST',
+      body: JSON.stringify({ metadata: { order_id: Date.now() } }),
+    });
+    const data = await response.json();
+    console.log(data);
+    window.location.reload();
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center bg-black">
-        <p className="text-gray-400">Loading cart...</p>
+        <p className="text-gray-400">Loading Cart...</p>
       </div>
     );
   }
@@ -119,7 +131,7 @@ export default function CartPage() {
                   <div className="flex h-20 w-20 items-center justify-center rounded-md bg-gray-800 text-3xl">
                     {item.productImage}
                   </div>
-                  
+
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-white">{item.productName}</h3>
                     <p className="text-gray-400">${item.productPrice.toFixed(2)} each</p>
@@ -174,10 +186,11 @@ export default function CartPage() {
                   Continue Shopping
                 </Link>
                 <button
-                  className="flex-1 rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-                  onClick={() => alert('Checkout functionality coming soon!')}
+                  className="flex-1 rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCheckout}
+                  disabled={checkoutLoading}
                 >
-                  Checkout
+                  {checkoutLoading ? 'Processing...' : 'Checkout'}
                 </button>
               </div>
             </div>
