@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApiKeyFromRequest, validateApiKey } from '@/lib/auth';
+import { addCorsHeaders } from '@/lib/cors';
 import { randomUUID } from 'crypto';
 import clientPromise from '@/lib/mongodb';
 
@@ -12,10 +13,11 @@ export async function POST(request: NextRequest) {
       const apiKeyUser = await validateApiKey(apiKey);
 
       if (!apiKeyUser) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { error: 'Invalid API key' },
           { status: 401 }
         );
+        return addCorsHeaders(response, request);
       }
 
       // Validate API key
@@ -47,32 +49,36 @@ export async function POST(request: NextRequest) {
 
       } catch (dbError) {
         console.error('MongoDB connection error:', dbError);
-        return NextResponse.json(
+        const response = NextResponse.json(
           { error: 'Database connection failed' },
           { status: 500 }
         );
+        return addCorsHeaders(response, request);
       }
 
-      return NextResponse.json(
+      const response = NextResponse.json(
         { message: 'Payment created successfully', paymentId: paymentId },
         { status: 200 }
       );
+      return addCorsHeaders(response, request);
 
     } else {
       // Fall back to session-based authentication
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized. Please provide an API key or login.' },
         { status: 401 }
       );
+      return addCorsHeaders(response, request);
     }
 
   } catch (error) {
 
     console.error('Create payment error:', error);
 
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
+    return addCorsHeaders(response, request);
   }
 }

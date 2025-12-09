@@ -234,7 +234,7 @@ export default function OrderPage() {
               </button>
               {selectedOrder.state === 'pending' ? (
                 <Link
-                  href={`/pay/${selectedOrder.paymentId}`}
+                  href={`/v1/payments/${selectedOrder.paymentId}`}
                   className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 text-center"
                 >
                   Pay

@@ -282,7 +282,7 @@ export default function PaymentPage() {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold text-white">${paymentData.amount}</p>
+              <p className="text-2xl font-bold text-white">{paymentData.amount} {paymentData.currency.toUpperCase()}</p>
               <p className="text-sm text-gray-400">Total:</p>
             </div>
           </div>

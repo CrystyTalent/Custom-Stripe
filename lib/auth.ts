@@ -2,7 +2,6 @@ import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import { Session } from './types';
 import clientPromise from './mongodb';
-import { ObjectId } from 'mongodb';
 
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();

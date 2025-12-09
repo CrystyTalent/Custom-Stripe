@@ -7,7 +7,7 @@ export default async function Home() {
 
   // Redirect logged-in users to store
   if (session) {
-    redirect('/store');
+    redirect('/keys');
   }
 
   return (
