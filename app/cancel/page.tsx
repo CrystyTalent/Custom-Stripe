@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -9,7 +9,7 @@ interface PaymentInfo {
   amount?: string;
 }
 
-export default function CancelPage() {
+function CancelContent() {
   const searchParams = useSearchParams();
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,6 +123,22 @@ export default function CancelPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CancelPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[calc(100vh-4rem)] bg-black flex items-center justify-center px-4 py-12">
+        <div className="max-w-2xl w-full">
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-8 text-center">
+            <p className="text-gray-400">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CancelContent />
+    </Suspense>
   );
 }
 
