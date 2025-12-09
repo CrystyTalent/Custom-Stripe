@@ -15,11 +15,11 @@ export default function CancelPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const paymentId = searchParams.get('payment_id') || searchParams.get('paymentId');
+    const paymentId = searchParams.get('paymentId');
     
     if (paymentId) {
       // Fetch payment details
-      fetch(`/api/payments/${paymentId}`)
+      fetch(`/api/v1/payments/${paymentId}`)
         .then(async (res) => {
           if (res.ok) {
             const data = await res.json();
@@ -40,7 +40,7 @@ export default function CancelPage() {
     }
   }, [searchParams]);
 
-  const paymentId = searchParams.get('payment_id') || searchParams.get('paymentId') || paymentInfo?.paymentId;
+  const paymentId = searchParams.get('paymentId') || paymentInfo?.paymentId;
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-black flex items-center justify-center px-4 py-12">
@@ -109,16 +109,10 @@ export default function CancelPage() {
               </Link>
             )}
             <Link
-              href="/store"
+              href={`/order?id=${paymentId}`}
               className="rounded-md border border-gray-700 bg-gray-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-gray-700"
             >
-              Continue Shopping
-            </Link>
-            <Link
-              href="/cart"
-              className="rounded-md border border-gray-700 bg-gray-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-gray-700"
-            >
-              View Cart
+              View Order
             </Link>
           </div>
 

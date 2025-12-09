@@ -108,12 +108,6 @@ export default function SuccessPage() {
             >
               View Orders
             </Link>
-            <Link
-              href="/store"
-              className="rounded-md border border-gray-700 bg-gray-800 px-6 py-3 font-semibold text-white transition-colors hover:bg-gray-700"
-            >
-              Continue Shopping
-            </Link>
           </div>
 
           {/* Additional Info */}
