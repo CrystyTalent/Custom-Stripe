@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
           name: order.name,
           description: order.description,
           createdAt: order.createdAt,
-          cartItems: order.cartItems,
           state: order.state || 'pending'
         }
       }, { status: 200 });

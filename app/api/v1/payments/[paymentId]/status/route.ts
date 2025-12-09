@@ -58,9 +58,16 @@ export async function POST(
       );
     }
 
+    // Fetch the updated payment to get success_url
+    const updatedPayment = await payments.findOne(
+      { paymentId: paymentId },
+      { projection: { success_url: 1 } }
+    );
+
     return NextResponse.json({
       message: 'Payment status updated successfully',
-      status: status
+      status: status,
+      success_url: updatedPayment?.success_url as string,
     }, { status: 200 });
   } catch (error) {
     console.error('Update payment status error:', error);

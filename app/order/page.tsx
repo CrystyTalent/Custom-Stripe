@@ -268,10 +268,10 @@ export default function OrderPage() {
             <p className="text-gray-400 mb-6">{error || 'You haven\'t placed any orders yet'}</p>
             <div className="flex gap-4 justify-center">
               <Link
-                href="/store"
+                href="/keys"
                 className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
               >
-                Continue Shopping
+                Continue Keys
               </Link>
             </div>
           </div>

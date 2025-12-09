@@ -36,7 +36,7 @@ export default function LoginPage() {
 
       if (response.ok) {
         // Success - redirect to store page
-        router.push('/store');
+        router.push('/keys');
         router.refresh();
       } else {
         // Show error message from server

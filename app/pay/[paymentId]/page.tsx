@@ -18,14 +18,8 @@ interface PaymentData {
   amount: string;
   currency: string;
   email: string;
-  name: string;
+  username: string;
   description: string;
-  cartItems: Array<{
-    productId: number;
-    productName: string;
-    quantity: number;
-    price: number;
-  }>;
 }
 
 function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
@@ -49,7 +43,7 @@ function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
 
     try {
       // Create payment intent
-      const intentResponse = await fetch(`/api/payments/${paymentData.paymentId}/intent`, {
+      const intentResponse = await fetch(`/api/v1/payments/${paymentData.paymentId}/intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -86,7 +80,7 @@ function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
 
       if (confirmError) {
         // Update payment status to failed
-        await fetch(`/api/payments/${paymentData.paymentId}/status`, {
+        await fetch(`/api/v1/payments/${paymentData.paymentId}/status`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -98,7 +92,7 @@ function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Update payment status to completed/paid
-        await fetch(`/api/payments/${paymentData.paymentId}/status`, {
+        await fetch(`/api/v1/payments/${paymentData.paymentId}/status`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -250,10 +244,10 @@ export default function PaymentPage() {
           <h1 className="text-2xl font-bold text-white mb-4">Payment Not Found</h1>
           <p className="text-gray-400 mb-6">{error || 'Unable to load payment details'}</p>
           <Link
-            href="/store"
+            href="/order"
             className="inline-block rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
           >
-            Go to Store
+            Go to Orders
           </Link>
         </div>
       </div>
@@ -280,7 +274,7 @@ export default function PaymentPage() {
           <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-700">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-md bg-white flex items-center justify-center">
-                <span className="text-2xl font-bold text-black">{paymentData.name[0].toUpperCase()}</span>
+                <span className="text-2xl font-bold text-black">{paymentData.username[0].toUpperCase()}</span>
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-white">{paymentData.description || 'Payment'}</h2>
