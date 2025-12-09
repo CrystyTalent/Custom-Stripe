@@ -52,7 +52,7 @@ export async function GET(
         amount: totalAmount,
         currency: payment.currency,
         email: payment.email,
-        name: payment.username,
+        username: payment.username,
         description: payment.description,
         cartItems: payment.cartItems || []
       }

@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
     const db = client.db(dbName);
     const payments = db.collection('payments');
 
+    
     // Check if a specific order ID is requested
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('id');
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest) {
       let order;
       try {
         // Try to find by _id first (if it's a valid ObjectId)
-        const query: { userId: string; _id?: ObjectId; paymentId?: string } = { userId: session.userId };
+        const query: { email: string; paymentId?: string } = { email: session.email };
         
         // Check if orderId is a valid ObjectId format
         if (ObjectId.isValid(orderId)) {
-          query._id = new ObjectId(orderId);
+          query.email = session.email;
         } else {
           // If not a valid ObjectId, search by paymentId
           query.paymentId = orderId;
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
           amount: totalAmount,
           currency: order.currency,
           email: order.email,
-          name: order.name,
+          username: order.username,
           description: order.description,
           createdAt: order.createdAt,
           state: order.state || 'pending'
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     // Get all orders for the user
     const allOrders = await payments
-      .find({ userId: session.userId })
+      .find({ email: session.email })
       .sort({ createdAt: -1 })
       .toArray();
 
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
         amount: totalAmount,
         currency: order.currency,
         email: order.email,
-        name: order.name,
+        username: order.username,
         description: order.description,
         createdAt: order.createdAt,
         state: order.state || 'pending'

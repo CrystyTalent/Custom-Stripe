@@ -92,7 +92,7 @@ function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
 
       if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Update payment status to completed/paid
-        await fetch(`/api/v1/payments/${paymentData.paymentId}/status`, {
+        const statusResponse = await fetch(`/api/v1/payments/${paymentData.paymentId}/status`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -100,8 +100,9 @@ function CheckoutForm({ paymentData }: { paymentData: PaymentData }) {
           body: JSON.stringify({ status: 'paid' }),
         });
 
+        const statusData = await statusResponse.json();
         // Redirect to success page or order page
-        router.push(`/order?paymentId=${paymentData.paymentId}`);
+        router.push(`${statusData.success_url as string}`);
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -210,7 +211,7 @@ export default function PaymentPage() {
 
     const fetchPayment = async () => {
       try {
-        const response = await fetch(`/api/payments/${paymentId}`);
+        const response = await fetch(`/api/v1/payments/${paymentId}`);
         if (response.ok) {
           const data = await response.json();
           setPaymentData(data.payment);

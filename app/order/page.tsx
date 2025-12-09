@@ -19,7 +19,7 @@ interface Order {
   amount: string;
   currency: string;
   email: string;
-  name: string;
+  username: string;
   description: string;
   createdAt: string;
   cartItems?: OrderItem[];
@@ -328,7 +328,7 @@ export default function OrderPage() {
                       <div className="text-sm font-mono text-white">{order.paymentId.substring(0, 8)}...</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">{order.name}</div>
+                      <div className="text-sm text-white">{order.username}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-300 max-w-xs truncate">{order.description}</div>

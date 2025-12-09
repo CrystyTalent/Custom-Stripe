@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         username,
         description,
         success_url,
-        metadata,
+        metadata: metadata.order_id,
         state: 'pending',
         createdAt: new Date(),
         updatedAt: new Date(),
