@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -26,6 +26,8 @@ interface Order {
   state: string;
 }
 
+type FilterStatus = 'all' | 'completed' | 'pending' | 'failed';
+
 export default function OrderPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -33,6 +35,8 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [refundingId, setRefundingId] = useState<string | null>(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -61,14 +65,14 @@ export default function OrderPage() {
 
   const fetchOrderDetails = async (orderId: string) => {
     setLoadingDetails(true);
-    setError(null); // Clear any previous errors
+    setError(null);
     try {
       const response = await fetch(`/api/orders?id=${encodeURIComponent(orderId)}`);
       if (response.ok) {
         const data = await response.json();
         if (data.order) {
           setSelectedOrder(data.order);
-          setError(null); // Clear error on success
+          setError(null);
         } else {
           console.error('Order data not found in response');
           setError('Failed to load order details');
@@ -88,11 +92,42 @@ export default function OrderPage() {
 
   const handleOrderClick = (order: Order) => {
     if (!order.cartItems) {
-      // Use _id if available, otherwise use paymentId
       const orderId = order._id || order.paymentId;
       fetchOrderDetails(orderId);
     } else {
       setSelectedOrder(order);
+    }
+  };
+
+  const handleRefund = async (paymentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to refund this payment?')) {
+      return;
+    }
+
+    setRefundingId(paymentId);
+    try {
+      const response = await fetch(`/api/orders/${paymentId}/refund`, {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        // Refresh orders list
+        await fetchOrders();
+        if (selectedOrder && selectedOrder.paymentId === paymentId) {
+          // Update selected order if it's the one being refunded
+          const updatedOrder = { ...selectedOrder, state: 'refunded' };
+          setSelectedOrder(updatedOrder);
+        }
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to process refund');
+      }
+    } catch (error) {
+      console.error('Error processing refund:', error);
+      alert('Failed to process refund. Please try again.');
+    } finally {
+      setRefundingId(null);
     }
   };
 
@@ -111,7 +146,8 @@ export default function OrderPage() {
     if (!state || typeof state !== 'string') {
       return 'bg-gray-600';
     }
-    switch (state.toLowerCase()) {
+    const lowerState = state.toLowerCase();
+    switch (lowerState) {
       case 'completed':
       case 'paid':
         return 'bg-green-600';
@@ -120,9 +156,64 @@ export default function OrderPage() {
       case 'failed':
       case 'cancelled':
         return 'bg-red-600';
+      case 'refunded':
+        return 'bg-purple-600';
       default:
         return 'bg-gray-600';
     }
+  };
+
+  const getStatusTextColor = (state: string | undefined | null) => {
+    if (!state || typeof state !== 'string') {
+      return 'text-white';
+    }
+    const lowerState = state.toLowerCase();
+    switch (lowerState) {
+      case 'completed':
+      case 'paid':
+        return 'text-green-400';
+      case 'pending':
+        return 'text-yellow-400';
+      case 'failed':
+      case 'cancelled':
+        return 'text-red-400';
+      default:
+        return 'text-white';
+    }
+  };
+
+  // Calculate statistics
+  const stats = useMemo(() => {
+    const total = orders.length;
+    const completed = orders.filter(o => ['completed', 'paid'].includes(o.state?.toLowerCase())).length;
+    const pending = orders.filter(o => o.state?.toLowerCase() === 'pending').length;
+    const failed = orders.filter(o => ['failed', 'cancelled'].includes(o.state?.toLowerCase())).length;
+    const totalRevenue = orders
+      .filter(o => ['completed', 'paid'].includes(o.state?.toLowerCase()))
+      .reduce((sum, o) => sum + parseFloat(o.amount || '0'), 0);
+
+    return { total, completed, pending, failed, totalRevenue };
+  }, [orders]);
+
+  // Filter orders based on selected status
+  const filteredOrders = useMemo(() => {
+    if (filterStatus === 'all') return orders;
+    if (filterStatus === 'completed') {
+      return orders.filter(o => ['completed', 'paid'].includes(o.state?.toLowerCase()));
+    }
+    if (filterStatus === 'pending') {
+      return orders.filter(o => o.state?.toLowerCase() === 'pending');
+    }
+    if (filterStatus === 'failed') {
+      return orders.filter(o => ['failed', 'cancelled'].includes(o.state?.toLowerCase()));
+    }
+    return orders;
+  }, [orders, filterStatus]);
+
+  const isRefundable = (state: string | undefined | null) => {
+    if (!state) return false;
+    const lowerState = state.toLowerCase();
+    return ['completed', 'paid'].includes(lowerState);
   };
 
   if (loading) {
@@ -133,13 +224,11 @@ export default function OrderPage() {
     );
   }
 
-  // Show order details modal
+  // Show order details view
   if (selectedOrder) {
-    
     return (
       <div className="min-h-[calc(100vh-4rem)] bg-black py-8 px-4">
         <div className="container mx-auto max-w-4xl">
-          {/* Header with back button */}
           <div className="mb-6">
             <button
               onClick={() => {
@@ -148,7 +237,7 @@ export default function OrderPage() {
               }}
               className="mb-4 text-blue-400 hover:text-blue-300 transition-colors"
             >
-              ← Back to Orders
+              ← Back to Payments
             </button>
             {error && (
               <div className="mb-4 rounded-lg border border-red-800 bg-red-900/50 p-4">
@@ -163,7 +252,6 @@ export default function OrderPage() {
             </div>
           </div>
 
-          {/* Order Information */}
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 mb-6">
             <h2 className="text-xl font-semibold text-white mb-4">Order Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -186,7 +274,6 @@ export default function OrderPage() {
             </div>
           </div>
 
-          {/* Order Items */}
           {selectedOrder.cartItems && selectedOrder.cartItems.length > 0 && (
             <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 mb-6">
               <h2 className="text-xl font-semibold text-white mb-4">Order Items</h2>
@@ -199,12 +286,10 @@ export default function OrderPage() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-md bg-gray-700 text-2xl">
                       {item.productImage}
                     </div>
-
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-white">{item.productName}</h3>
                       <p className="text-gray-400">Quantity: {item.quantity}</p>
                     </div>
-
                     <div className="text-right">
                       <p className="text-lg font-bold text-white">
                         ${(item.price * item.quantity).toFixed(2)}
@@ -217,7 +302,6 @@ export default function OrderPage() {
             </div>
           )}
 
-          {/* Order Summary */}
           <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
             <div className="space-y-3 mb-4">
               <div className="border-gray-700 pt-3 flex items-center justify-between">
@@ -230,7 +314,7 @@ export default function OrderPage() {
                 onClick={() => setSelectedOrder(null)}
                 className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-gray-700"
               >
-                Back to Orders
+                Back to Payments
               </button>
               {selectedOrder.state === 'pending' ? (
                 <Link
@@ -239,6 +323,14 @@ export default function OrderPage() {
                 >
                   Pay
                 </Link>
+              ) : isRefundable(selectedOrder.state) ? (
+                <button
+                  onClick={() => handleRefund(selectedOrder.paymentId, {} as React.MouseEvent)}
+                  disabled={refundingId === selectedOrder.paymentId}
+                  className="rounded-md bg-purple-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {refundingId === selectedOrder.paymentId ? 'Processing...' : 'Refund'}
+                </button>
               ) : (
                 <button
                   onClick={() => window.print()}
@@ -254,106 +346,133 @@ export default function OrderPage() {
     );
   }
 
-  // Show orders table
-  if (error || orders.length === 0) {
-    return (
-      <div className="min-h-[calc(100vh-4rem)] bg-black py-8 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">My Orders</h1>
-            <p className="text-gray-400">View all your orders</p>
-          </div>
-          <div className="rounded-lg border border-gray-800 bg-gray-900 p-8 text-center">
-            <h2 className="text-2xl font-bold text-white mb-4">No Orders Found</h2>
-            <p className="text-gray-400 mb-6">{error || 'You haven\'t placed any orders yet'}</p>
-            <div className="flex gap-4 justify-center">
-              <Link
-                href="/keys"
-                className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                Continue Keys
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // Main Payment Dashboard view
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-black py-8 px-4">
-      <div className="container mx-auto max-w-6xl">
+      <div className="container mx-auto max-w-7xl">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">My Orders</h1>
-          <p className="text-gray-400">{orders.length} order(s) found</p>
+          <h1 className="text-4xl font-bold text-white">Payment Dashboard</h1>
         </div>
 
-        {/* Orders Table */}
-        <div className="rounded-lg border border-gray-800 bg-gray-900 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-800">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Payment ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Username
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Total Price
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Currency
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Create Date
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    State
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {orders.map((order) => (
-                  <tr
-                    key={order._id}
-                    onClick={() => handleOrderClick(order)}
-                    className="hover:bg-gray-800 cursor-pointer transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono text-white">{order.paymentId.substring(0, 8)}...</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">{order.username}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-300 max-w-xs truncate">{order.description}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-white">
-                        {order.amount}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300 uppercase">{order.currency}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-300">{formatDate(order.createdAt)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold text-white ${getStatusColor(order.state)}`}>
-                        {(order.state || 'UNKNOWN').toUpperCase()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <p className="text-sm text-gray-400 mb-2">Total Payments</p>
+            <p className="text-2xl font-bold text-white">{stats.total}</p>
           </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <p className="text-sm text-gray-400 mb-2">Completed</p>
+            <p className="text-2xl font-bold text-green-400">{stats.completed}</p>
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <p className="text-sm text-gray-400 mb-2">Pending</p>
+            <p className="text-2xl font-bold text-yellow-400">{stats.pending}</p>
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <p className="text-sm text-gray-400 mb-2">Failed</p>
+            <p className="text-2xl font-bold text-red-400">{stats.failed}</p>
+          </div>
+          <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+            <p className="text-sm text-gray-400 mb-2">Total Revenue</p>
+            <p className="text-2xl font-bold text-white">${stats.totalRevenue.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="flex gap-6 mb-6 border-b border-gray-800">
+          <button
+            onClick={() => setFilterStatus('all')}
+            className={`pb-3 px-1 font-medium transition-colors ${
+              filterStatus === 'all'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            All
+          </button>
+          <button
+            onClick={() => setFilterStatus('completed')}
+            className={`pb-3 px-1 font-medium transition-colors ${
+              filterStatus === 'completed'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            Completed
+          </button>
+          <button
+            onClick={() => setFilterStatus('pending')}
+            className={`pb-3 px-1 font-medium transition-colors ${
+              filterStatus === 'pending'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            Pending
+          </button>
+          <button
+            onClick={() => setFilterStatus('failed')}
+            className={`pb-3 px-1 font-medium transition-colors ${
+              filterStatus === 'failed'
+                ? 'text-blue-400 border-b-2 border-blue-400'
+                : 'text-gray-400 hover:text-gray-300'
+            }`}
+          >
+            Failed
+          </button>
+        </div>
+
+        {/* Transactions List */}
+        <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+          {filteredOrders.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">No payments found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredOrders.map((order) => (
+                <div
+                  key={order._id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-800 bg-gray-800 hover:bg-gray-700 transition-colors cursor-pointer"
+                  onClick={() => handleOrderClick(order)}
+                >
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Payment ID</p>
+                      <p className="text-white font-mono text-sm">{order.paymentId.substring(0, 12)}...</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Description</p>
+                      <p className="text-white truncate max-w-xs">{order.description}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Date</p>
+                      <p className="text-white text-sm">{formatDate(order.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Amount</p>
+                      <p className="text-white font-semibold">${order.amount} {order.currency.toUpperCase()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 ml-4">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(order.state)} text-white`}>
+                      {(order.state || 'UNKNOWN').toUpperCase()}
+                    </span>
+                    {isRefundable(order.state) && (
+                      <button
+                        onClick={(e) => handleRefund(order.paymentId, e)}
+                        disabled={refundingId === order.paymentId}
+                        className="px-4 py-2 rounded-md bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {refundingId === order.paymentId ? 'Processing...' : 'Refund'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {loadingDetails && (
