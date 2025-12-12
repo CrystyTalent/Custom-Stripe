@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
-import LogoutButton from './LogoutButton';
+import UserMenu from './UserMenu';
 
 export default async function Header() {
   const session = await getSession();
@@ -21,13 +21,18 @@ export default async function Header() {
                 Order
               </Link>
               <Link
+                href="/docs"
+                className="rounded-md px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+              >
+                Docs
+              </Link>
+              <Link
                 href="/keys"
                 className="rounded-md px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
               >
                 API Keys
               </Link>
-              <span className="text-gray-300">Welcome, {session.username}</span>
-              <LogoutButton />
+              <UserMenu username={session.username} />
             </>
           ) : (
             <>
