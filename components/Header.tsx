@@ -9,7 +9,7 @@ export default async function Header() {
     <header className="w-full border-b border-gray-800 bg-black">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="text-xl font-bold text-white">
-          My App
+          Payzo
         </Link>
         <nav className="flex items-center gap-4">
           {session ? (
