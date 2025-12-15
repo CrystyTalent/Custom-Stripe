@@ -39,7 +39,7 @@ export default function DocsPage() {
             <div className="rounded-lg bg-gray-900 p-6">
               <pre className="overflow-x-auto text-sm text-gray-300">
                 <code>{`// Create a payment on your server
-const response = await fetch('/api/v1/payments', {
+const response = await fetch('https://payzo.cc/api/v1/payments', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer payzo_live_7cc5bd8f9b04e2ee0d83c53986d14f6cb383c0d9ae16ae134a26a6455bb0fbf3',
@@ -64,7 +64,7 @@ if (!response.ok) {
 }
 
 // Redirect customer to checkout page
-const PublicAPI = 'https://yourdomain.com/v1/payments' // Replace with your checkout base URL
+const PublicAPI = 'https://payzo.cc/v1/payments' // Replace with your checkout base URL
 window.location.href = \`\${PublicAPI}/\${data.paymentId}\`;`}</code>
               </pre>
             </div>
@@ -80,7 +80,7 @@ window.location.href = \`\${PublicAPI}/\${data.paymentId}\`;`}</code>
               <pre className="overflow-x-auto text-sm text-gray-300">
                 <code>{`<?php
 // API endpoint
-$url = 'https://yourdomain.com/api/v1/payments';
+$url = 'https://payzo.cc/api/v1/payments';
 
 // Your secret API key
 $apiKey = 'payzo_live_7cc5bd8f9b04e2ee0d83c53986d14f6cb383c0d9ae16ae134a26a6455bb0fbf3';
@@ -125,7 +125,7 @@ if ($httpCode !== 200) {
 }
 
 // Successful → redirect to checkout URL
-$PublicAPI = "https://yourdomain.com/v1/payments"; // replace with your checkout base URL
+$PublicAPI = "https://payzo.cc/v1/payments"; // replace with your checkout base URL
 header("Location: {$PublicAPI}/" . $result['paymentId']);
 exit;
 ?>`}</code>
@@ -178,7 +178,7 @@ exit;
                         <td className="px-4 py-3 font-mono text-blue-400">currency</td>
                         <td className="px-4 py-3">string</td>
                         <td className="px-4 py-3">Yes</td>
-                        <td className="px-4 py-3">Currency code (e.g., 'usd', 'eur')</td>
+                        <td className="px-4 py-3">Currency code (e.g., &apos;usd&apos;, &apos;eur&apos;)</td>
                       </tr>
                       <tr className="border-b border-gray-800">
                         <td className="px-4 py-3 font-mono text-blue-400">success_url</td>
@@ -208,7 +208,7 @@ exit;
                         <td className="px-4 py-3 font-mono text-blue-400">metadata</td>
                         <td className="px-4 py-3">object</td>
                         <td className="px-4 py-3">No</td>
-                        <td className="px-4 py-3">Custom data to track orders (e.g., {'{'} order_id: '1234' {'}'})</td>
+                        <td className="px-4 py-3">Custom data to track orders (e.g., &lbrace; order_id: &apos;1234&apos; &rbrace;)</td>
                       </tr>
                     </tbody>
                   </table>

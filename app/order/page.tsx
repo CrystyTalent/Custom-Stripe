@@ -163,25 +163,6 @@ export default function OrderPage() {
     }
   };
 
-  const getStatusTextColor = (state: string | undefined | null) => {
-    if (!state || typeof state !== 'string') {
-      return 'text-white';
-    }
-    const lowerState = state.toLowerCase();
-    switch (lowerState) {
-      case 'completed':
-      case 'paid':
-        return 'text-green-400';
-      case 'pending':
-        return 'text-yellow-400';
-      case 'failed':
-      case 'cancelled':
-        return 'text-red-400';
-      default:
-        return 'text-white';
-    }
-  };
-
   // Calculate statistics
   const stats = useMemo(() => {
     const total = orders.length;
@@ -321,7 +302,7 @@ export default function OrderPage() {
                   href={`/v1/payments/${selectedOrder.paymentId}`}
                   className="rounded-md bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 text-center"
                 >
-                  Pay
+                  Complete Payment
                 </Link>
               ) : isRefundable(selectedOrder.state) ? (
                 <button
