@@ -246,7 +246,7 @@ exit;
                 <ol className="ml-6 list-decimal space-y-4">
                   <li>Create a payment using the API endpoint with your API key</li>
                   <li>Receive a paymentId in the response</li>
-                  <li>Redirect the customer to: <code className="rounded bg-gray-800 px-2 py-1 text-blue-400">https://yourdomain.com/v1/payments/{'{paymentId}'}</code></li>
+                  <li>Redirect the customer to: <code className="rounded bg-gray-800 px-2 py-1 text-blue-400">https://payzo.cc/v1/payments/{'{paymentId}'}</code></li>
                   <li>Customer completes payment on the secure checkout page</li>
                   <li>Customer is redirected to your success_url after successful payment</li>
                 </ol>
